@@ -1,0 +1,31 @@
+{
+  "description": "อ่านสรุปภาษาไทยออกเสียงเมื่อ Claude ทำงานเสร็จ และแจ้งเตือนเมื่อรออินพุต",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "C:/Users/tai24/AppData/Local/Programs/Python/Python313/python.exe",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/secretary.py", "--mode", "stop"],
+            "async": true,
+            "statusMessage": "กำลังสรุปเป็นภาษาไทย..."
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "permission_prompt|idle_prompt|agent_needs_input",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "C:/Users/tai24/AppData/Local/Programs/Python/Python313/python.exe",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/secretary.py", "--mode", "notify"],
+            "async": true
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "lingling",
+  "version": "0.2.0",
+  "description": "สรุปผลงานของ Claude เป็นภาษาไทยแบบคนคุยกัน แล้วอ่านออกเสียงให้ฟังเหมือนมีเลขาส่วนตัว",
+  "author": { "name": "Panumeth" },
+  "keywords": ["tts", "thai", "voice", "summary"]
+}

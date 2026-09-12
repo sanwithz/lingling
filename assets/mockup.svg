@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="420" viewBox="0 0 760 420" font-family="'Segoe UI', 'Noto Sans Thai', 'Leelawadee UI', sans-serif">
+  <defs>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff7a45"/>
+      <stop offset="100%" stop-color="#ffb020"/>
+    </linearGradient>
+    <filter id="soft" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="10"/>
+    </filter>
+  </defs>
+
+  <rect width="760" height="420" rx="18" fill="#0d1117"/>
+
+  <!-- terminal window -->
+  <rect x="24" y="24" width="712" height="372" rx="12" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+
+  <!-- title bar -->
+  <rect x="24" y="24" width="712" height="34" rx="12" fill="#1c2128"/>
+  <circle cx="46" cy="41" r="6" fill="#ff5f56"/>
+  <circle cx="66" cy="41" r="6" fill="#ffbd2e"/>
+  <circle cx="86" cy="41" r="6" fill="#27c93f"/>
+  <text x="380" y="46" text-anchor="middle" fill="#8b949e" font-size="13">Claude Code</text>
+
+  <!-- prompt line -->
+  <text x="48" y="92" fill="#58a6ff" font-size="15" font-family="Consolas, 'Cascadia Code', monospace">❯</text>
+  <text x="66" y="92" fill="#c9d1d9" font-size="15" font-family="Consolas, 'Cascadia Code', monospace">แก้บั๊ก encoding ให้หน่อย</text>
+
+  <!-- assistant response block -->
+  <circle cx="52" cy="122" r="4" fill="#58a6ff"/>
+  <text x="66" y="127" fill="#e6edf3" font-size="14">Write(secretary.py)</text>
+  <text x="66" y="150" fill="#7d8590" font-size="13" font-family="Consolas, 'Cascadia Code', monospace">- proc = subprocess.run(..., text=True)</text>
+  <text x="66" y="171" fill="#7ee787" font-size="13" font-family="Consolas, 'Cascadia Code', monospace">+ proc = subprocess.run(..., text=True, encoding="utf-8")</text>
+
+  <circle cx="52" cy="200" r="4" fill="#58a6ff"/>
+  <text x="66" y="205" fill="#8b949e" font-size="13" font-style="italic">Ran 1 shell command</text>
+
+  <text x="48" y="240" fill="#e6edf3" font-size="14">แก้บั๊ก encoding เรียบร้อยแล้วครับ ทดสอบผ่านหมดแล้ว</text>
+
+  <!-- speaking indicator card -->
+  <rect x="48" y="272" width="640" height="92" rx="14" fill="#1c2128" stroke="#30363d"/>
+  <circle cx="90" cy="318" r="26" fill="url(#glow)" filter="url(#soft)" opacity="0.55"/>
+  <circle cx="90" cy="318" r="20" fill="#0d1117" stroke="url(#glow)" stroke-width="2"/>
+  <path d="M83 310v16l-8-6h-6v-4h6l8-6z" fill="url(#glow)"/>
+  <path d="M98 308c4 6 4 14 0 20" stroke="url(#glow)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M103 303c7 9 7 21 0 30" stroke="url(#glow)" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.6"/>
+
+  <text x="128" y="308" fill="#e6edf3" font-size="14" font-weight="600">lingling กำลังพูด…</text>
+  <text x="128" y="330" fill="#a5adba" font-size="13">"แก้บั๊ก encoding เรียบร้อยแล้วครับ, ทดสอบผ่านหมดแล้ว"</text>
+  <text x="128" y="350" fill="#6e7681" font-size="11">th-TH-PremwadeeNeural · edge-tts</text>
+
+  <!-- footer brand mark (swap for a real logo whenever you have one) -->
+  <text x="380" y="408" text-anchor="middle" fill="#484f58" font-size="12">lingling — เลขาส่วนตัวของ Claude Code</text>
+</svg>

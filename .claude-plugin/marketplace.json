@@ -1,0 +1,13 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "lingling",
+  "owner": { "name": "vectorkub", "url": "https://github.com/vectorkub" },
+  "plugins": [
+    {
+      "name": "lingling",
+      "source": "./",
+      "description": "สรุปงานเป็นภาษาไทยแล้วอ่านออกเสียง",
+      "category": "productivity"
+    }
+  ]
+}
