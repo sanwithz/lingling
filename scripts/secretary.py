@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-lingling — เลขาส่วนตัวสองภาษา: สรุปผลงานของ Claude แล้วอ่านออกเสียงให้ฟัง
-Claude ตอบไทย -> สรุปไทย + เสียงไทย / Claude ตอบอังกฤษ -> สรุปอังกฤษ + เสียงอังกฤษ
+lingling — a bilingual voice secretary: summarises what Claude did, then says it aloud.
+Claude answers in Thai -> Thai summary, Thai voice. In English -> English, English voice.
 
-รับ JSON ของ hook ทาง stdin แล้ว:
-  --mode inject  : ฉีดคำสั่งให้ Claude ปิดท้ายทุกคำตอบด้วยบรรทัดสรุปสำหรับอ่านออกเสียง
-                   (UserPromptSubmit — ต้องเป็น sync hook ไม่งั้น output ถูกทิ้ง)
-  --mode stop    : ดึงบรรทัดสรุปนั้นมาอ่านออกเสียง ถ้าไม่มีค่อยสรุปเองเป็น fallback
-  --mode notify  : พูดแจ้งเตือนสั้นๆ ตอน Claude รอ permission / รออินพุต
-  --mode test    : ทดสอบเสียงทั้งสองภาษา (ไม่ต้องมี stdin)
+Reads the hook's JSON from stdin, then:
+  --mode inject  : ask Claude to end every answer with a one-line spoken summary
+                   (UserPromptSubmit — must stay sync, async stdout is discarded)
+  --mode stop    : speak that line; if it is missing, summarise the answer instead
+  --mode notify  : say a short notice when Claude wants permission or input
+  --mode test    : speak a test line in each language (needs no stdin)
 
-ออกแบบให้ "ห้ามพัง": ทุก error จะถูกกลืนแล้ว exit 0 เสมอ
-เพื่อไม่ให้ session ของ Claude Code สะดุดเพราะ hook
+Built so it cannot break anything: every error is swallowed and the exit code is
+always 0, so a failure in here never interrupts a Claude Code session.
 """
 
 import argparse
@@ -807,7 +807,7 @@ def mode_test(cfg: dict) -> None:
           f" (api key: {'yes' if os.environ.get('ANTHROPIC_API_KEY') else 'no'},"
           f" claude cli: {'yes' if shutil.which('claude') else 'no'})")
     print(f"transcript    : {'on' if cfg['inject_instruction'] else 'off'}"
-          f" (Claude ปิดท้ายคำตอบด้วยบรรทัด {SPOKEN_MARKER})")
+          f" (Claude closes each answer with a {SPOKEN_MARKER} line)")
     print(f"config        : {config_path()}")
     print(f"log           : {Path(cfg['log']).expanduser()}")
     forced = str(cfg.get("language", "auto")).strip().lower()
