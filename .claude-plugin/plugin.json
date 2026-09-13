@@ -1,6 +1,6 @@
 {
   "name": "lingling",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "description": "Bilingual voice secretary: Claude ends each answer with a spoken-summary line, read aloud in the language it answered in (Thai or English)",
   "author": {
     "name": "Panumeth"

@@ -61,23 +61,20 @@ If you need quiet for a moment:
 | `/lingling:mute` | Stop talking |
 | `/lingling:unmute` | Start talking again |
 
-## Make the voice nicer
+## The voice
 
-The voice your computer ships with is usable, but it's rough — and on Windows there is no Thai voice at all, so it tries to sound out Thai with an English mouth. It's not great.
+The voice your computer ships with is rough. On Windows there is no Thai voice at all, so it sounds Thai out with an English mouth; on macOS the Thai voice is an old one, flat and choppy.
 
-One command fixes it, on any operating system:
+So lingling doesn't use it. The first time it runs, it quietly installs a free, natural-sounding voice for both languages, and speaks with that instead. There is nothing for you to do, and nothing else on your computer is touched — it all lives in one folder, `~/.claude/lingling-venv`, and deleting that folder undoes it.
 
-```
-pip install edge-tts
-```
-
-That gives you a free, natural-sounding voice in both Thai and English. It needs an internet connection. On macOS, add `"voice_engine": "edge"` to `~/.claude/thai-secretary.json` so it actually gets used. On Linux you also need a sound player: `sudo apt install mpg123`.
+Two things worth knowing. The good voice is an online one, so with no internet it falls back to your computer's own voice rather than going quiet. And on Linux, it also needs something to play sound through: `sudo apt install mpg123`.
 
 ## If it's not talking
 
 - Give it a real task. Very short answers are skipped on purpose — you don't need a voice to tell you "yes".
 - Make sure you opened a **new** terminal window after installing Python.
 - Check that it's not muted: `/lingling:unmute`.
+- Voice sounds robotic? The good one installs in the background, so the first answer or two may speak before it is ready. `~/.claude/lingling-install.json` says how that went.
 - Still nothing? `~/.claude/thai-secretary.log` records what happened, including why it stayed quiet.
 
 ## Good to know
