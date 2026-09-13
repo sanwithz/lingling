@@ -1,0 +1,9 @@
+# Everything ships with LF endings, whatever the cloning machine's core.autocrlf says.
+#
+# scripts/run.sh is the reason this file exists. Git for Windows defaults to
+# core.autocrlf=true, which would hand Windows installers a run.sh full of CRLF,
+# and bash treats the trailing \r as part of the last token on every line, so the
+# hook dies with an unreadable error. Python and JSON are fine either way, but
+# normalising the whole tree keeps diffs clean too.
+* text=auto eol=lf
+*.svg text eol=lf

@@ -1,13 +1,13 @@
 {
-  "description": "ให้ Claude ปิดท้ายคำตอบด้วยบรรทัดสรุป แล้วอ่านออกเสียงเป็นภาษาเดียวกับที่ตอบ (ไทย/อังกฤษ)",
+  "description": "Ask Claude to close each answer with a spoken-summary line, then read it aloud in whichever language it answered in",
   "hooks": {
     "UserPromptSubmit": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "C:/Users/tai24/AppData/Local/Programs/Python/Python313/python.exe",
-            "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/secretary.py", "--mode", "inject"],
+            "shell": "bash",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" --mode inject",
             "timeout": 15
           }
         ]
@@ -18,10 +18,10 @@
         "hooks": [
           {
             "type": "command",
-            "command": "C:/Users/tai24/AppData/Local/Programs/Python/Python313/python.exe",
-            "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/secretary.py", "--mode", "stop"],
+            "shell": "bash",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" --mode stop",
             "async": true,
-            "statusMessage": "กำลังอ่านสรุปให้ฟัง..."
+            "statusMessage": "reading the summary aloud..."
           }
         ]
       }
@@ -32,8 +32,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "C:/Users/tai24/AppData/Local/Programs/Python/Python313/python.exe",
-            "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/secretary.py", "--mode", "notify"],
+            "shell": "bash",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/run.sh\" --mode notify",
             "async": true
           }
         ]

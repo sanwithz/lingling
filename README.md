@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="assets/mockup.svg" width="700" alt="lingling พูดสรุปงานเป็นภาษาไทยหลัง Claude Code ทำงานเสร็จ">
+  <img src="assets/mockup.svg" width="700" alt="lingling speaking a summary aloud after Claude Code finishes a task">
 </p>
 
 <h1 align="center">lingling</h1>
 
 <p align="center">
-  <em>Claude ทำงานเสร็จ แล้วมันเล่าให้ฟังเอง — ไทยหรืออังกฤษตามที่มันตอบ</em>
+  <em>Claude finishes the job, then tells you what it did — out loud, in the language it answered in</em>
 </p>
 
 <p align="center">
@@ -15,40 +15,47 @@
   <img src="https://img.shields.io/badge/voice-th--TH%20%7C%20en--US-111111?style=flat-square" alt="Thai and English voice">
 </p>
 
-> **หมายเหตุ:** `assets/mockup.svg` ด้านบนเป็นภาพ mockup ชั่วคราว เดี๋ยวจะเปลี่ยนเป็นโลโก้จริงทีหลัง
+> **Note:** `assets/mockup.svg` above is a placeholder mockup and will be replaced with real artwork.
 
 ---
 
-คุณสั่งงาน Claude Code แล้วเดินไปชงกาแฟ กลับมาก็ต้องไล่อ่าน output ยาวๆ ว่ามันทำอะไรไปบ้าง
+You give Claude Code a task and walk off to make coffee. You come back to a wall of output and have to read all of it just to find out what happened.
 
-**lingling** แก้ปัญหานั้น: พอ Claude ทำงานเสร็จ มันจะปิดท้ายคำตอบด้วยบทสรุปหนึ่งบรรทัด แล้วอ่านบรรทัดนั้นออกเสียงให้ฟังทันที เหมือนมีเลขาส่วนตัวคอยรายงานผลงานให้ ไม่ต้องเหลือบมองจอเป็นระยะๆ อีกต่อไป
+**lingling** fixes that. When Claude finishes, it closes its answer with a one-line summary and reads that line aloud immediately — like having a secretary report back, so you don't have to keep glancing at the screen.
 
-บรรทัดนั้นทำหน้าที่เป็น **transcript** ไปในตัว ใครไม่ได้อยู่ฟังก็กลับมาอ่านตามในแชทได้เลยว่าเสียงพูดอะไรไป
+That line doubles as a **transcript**. If you weren't listening, it's right there in the chat to read.
 
-**สองภาษาอัตโนมัติ** — Claude ตอบไทยก็สรุปไทยแล้วพูดด้วยเสียงไทย ตอบอังกฤษก็สรุปอังกฤษแล้วพูดด้วยเสียงอังกฤษ ไม่ต้องสลับโหมดเอง
+**Bilingual, automatically.** Answer in Thai and you get a Thai summary in a Thai voice; answer in English and you get an English summary in an English voice. There is no mode to switch.
 
-นอกจากนี้ยังพูดแจ้งเตือนตอน Claude ค้างรอ permission หรือรออินพุตจากคุณด้วย
+It also speaks up when Claude is stuck waiting on a permission prompt or on your input.
 
-## ก่อน / หลัง
+## Before / after
 
-**ก่อน** — Claude ตอบยาวๆ เต็มไปด้วย markdown, code block, technical jargon คุณต้องอ่านเองทั้งหมดเพื่อรู้ว่ามันทำอะไรไปแล้ว
+**Before** — a long answer full of markdown, code blocks and jargon, and you read all of it to learn what changed.
 
-**หลัง** — lingling สรุปให้เหลือหนึ่งถึงสองประโยคที่ฟังแล้วเข้าใจทันที พูดด้วยเสียงธรรมชาติในภาษาเดียวกับที่ Claude ตอบ เว้นจังหวะเหมือนคนพูดจริง ไม่ใช้ศัพท์ทางการ ไม่พยายามอ่านโค้ดหรือ URL ให้ปวดหัว
+**After** — one or two sentences you understand on hearing them, spoken in a natural voice in the same language Claude answered in, paced like a person talking, with no attempt to read code or URLs at you.
 
-## จุดเด่น
+## Highlights
 
-- **สรุปอัตโนมัติทุกครั้งที่ Claude หยุดทำงาน** ผ่าน `Stop` hook ไม่ต้องสั่งเอง
-- **สองภาษาในตัว** ตรวจจากคำตอบของ Claude เองว่าเป็นไทยหรืออังกฤษ แล้วเลือกภาษาสรุปกับเสียงพูดให้ตรงกัน
-- **มี transcript ท้ายคำตอบทุกครั้ง** อ่านตามได้ในแชทถ้าไม่ได้อยู่ฟัง
-- **แจ้งเตือนด้วยเสียง** เมื่อ Claude รอ permission หรือรออินพุตจากคุณ
-- **เลือก TTS engine ให้เองอัตโนมัติ** ตามสิ่งที่มีในเครื่อง (ดูตารางด้านล่าง) หรือบังคับเองก็ได้
-- **สรุปด้วย AI** ผ่าน API key หรือ subscription เดิม (`claude -p`) ไม่มี key ก็ใช้งานได้
-- **จังหวะพูดเป็นธรรมชาติ** เว้นวรรคตามประโยค ไม่พูดรวดเดียวไม่มีจุดหยุดพัก ไม่ใช้ศัพท์ราชบัณฑิตย์แข็งๆ
-- **ปิด/เปิดเสียงกลางทางได้** ด้วย `/lingling:mute` และ `/lingling:unmute`
+- **Fires on every turn** through the `Stop` hook. Nothing to invoke.
+- **Bilingual end to end.** The language of Claude's own answer picks the summary language *and* the voice.
+- **A transcript on every answer**, readable in the chat when you weren't listening.
+- **No added latency.** The spoken line is written during the answer, so nothing runs a model after the turn ends.
+- **Spoken notifications** when Claude wants permission or input.
+- **Picks a TTS engine for you** based on what's installed, or use the one you name.
+- **Mute mid-session** with `/lingling:mute` and `/lingling:unmute`.
 
-## ติดตั้ง
+## Requirements
 
-### Claude Code
+| | |
+|---|---|
+| **Python 3.9+** | Must be a real install from [python.org](https://www.python.org/downloads/) (or `winget install Python.Python.3.13`). The Microsoft Store alias is a stub that does nothing — lingling detects and skips it. |
+| **Git for Windows** | Windows only. Claude Code runs shell hooks through Git Bash, which ships with [Git for Windows](https://git-scm.com/download/win). |
+| **A TTS engine** | `pip install edge-tts` is the easiest good one, and it's free. See [Voices](#voices). |
+
+After installing Python on Windows, **close every terminal window and open a new one**. Retyping `claude` in the same window won't pick up the new `PATH`.
+
+## Install
 
 ```
 /plugin marketplace add vectorkub/lingling
@@ -57,71 +64,66 @@
 /plugin install lingling@lingling
 ```
 
-(ต้องส่งสองคำสั่งแยกกันคนละข้อความ)
+(Send those as two separate messages.)
 
-### ทดสอบว่าใช้ได้
+### Check that it works
 
 ```bash
 python scripts/secretary.py --mode test
 ```
 
-จะบอกว่าตรวจเจอ TTS engine อะไร ใช้เสียงตัวไหนของแต่ละภาษา ใช้ตัวสรุปแบบไหน แล้วพูดทดสอบให้ฟังทั้งไทยและอังกฤษอย่างละประโยค
+It prints the TTS engine it found, the voice it will use for each language, which summariser is available, and then speaks one test line in Thai and one in English.
 
-## transcript ท้ายคำตอบมาจากไหน
+## How the transcript gets there
 
-`UserPromptSubmit` hook แนบคำสั่งสั้นๆ เข้าไปทุกเทิร์น ให้ Claude ปิดท้ายคำตอบด้วยบรรทัดเดียวหน้าตาแบบนี้:
+A `UserPromptSubmit` hook attaches a short instruction to every turn asking Claude to end its answer with a single line shaped like this:
 
 ```
-🔊 แก้บั๊กเรื่องภาษาเสร็จแล้วครับ, ตอนนี้เทสผ่านหมดทุกเคส
+🔊 Fixed the language detection bug, all tests pass now.
 ```
 
-`Stop` hook แค่ดึงบรรทัดนั้นไปเข้า TTS ตรงๆ ได้ประโยชน์สองต่อ:
+The `Stop` hook then feeds that line straight to text-to-speech. Two things fall out of doing it this way:
 
-- **ไม่มีดีเลย์** ไม่ต้องเรียกโมเดลมาสรุปซ้ำหลังคำตอบจบ hook จึงเป็น `async` ที่ไม่หน่วง turn เลย
-- **ภาษาตรงเสมอ** Claude เขียนบรรทัดนี้ด้วยภาษาเดียวกับที่มันตอบอยู่แล้ว ไม่ต้องเดา
+- **No delay.** Nothing has to call a model after the answer is finished, so the hook stays `async` and never holds up your turn.
+- **The language always matches.** Claude writes that line in whatever language it was already answering in, so nothing has to be inferred.
 
-ถ้าเทิร์นไหนไม่มีบรรทัดนี้ (เช่นเปิด `inject_instruction: false` หรือ Claude ข้ามไปเพราะตอบสั้นมาก)
-สคริปต์จะถอยไปใช้ทางเดิมคือสรุปเองด้วยโมเดล แล้วเดาภาษาจากตัวคำตอบแทน
+If a turn has no such line — you set `inject_instruction: false`, or Claude skipped it on a one-sentence reply — the script falls back to summarising the answer itself and detecting the language from the text.
 
-## ตัวสรุป (ทางสำรอง)
+## Summariser (fallback path only)
 
-ใช้เฉพาะตอนไม่เจอบรรทัด 🔊 ในคำตอบ สคริปต์เลือกให้เองตามนี้ (ตั้ง `summarizer` ใน config เพื่อบังคับได้):
+Used only when no `🔊` line is present. The script picks the first available option; set `summarizer` in the config to force one.
 
-| โหมด | เงื่อนไข | ความเร็ว | ค่าใช้จ่าย |
+| Mode | Requires | Speed | Cost |
 |---|---|---|---|
-| `api` | มี `ANTHROPIC_API_KEY` ใน env | ~1 วิ | ถูกมาก (Haiku, ~200 token/ครั้ง) |
-| `cli` | มีคำสั่ง `claude` ในเครื่อง | ~3-5 วิ | ใช้โควตา subscription เดิม ไม่ต้องมี key |
-| `none` | — | ทันที | ฟรี แต่จะอ่านข้อความดิบ ไม่ได้สรุป |
+| `api` | `ANTHROPIC_API_KEY` in the environment | ~1s | Very cheap (Haiku, ~200 tokens a call) |
+| `cli` | The `claude` command on `PATH` | ~3-5s, slower from cold | Uses your existing subscription, no key needed |
+| `none` | — | Instant | Free, but reads the raw text instead of a summary |
 
-ไม่ว่าโหมดไหน prompt ที่ส่งไปสรุปจะเป็นภาษาเดียวกับคำตอบต้นทาง คำตอบอังกฤษได้บทสรุปอังกฤษ ไม่ใช่ไทย
+Either way the prompt goes out in the same language as the answer, so an English answer gets an English summary rather than a Thai one.
 
-โหมด `cli` เรียก `claude -p` พร้อม `--settings '{"disableAllHooks": true}'`
-จุดนี้สำคัญมาก ถ้าไม่ปิด hook ใน session ลูก มันจะยิง Stop hook ซ้อนกลับมาเป็น loop ไม่รู้จบ
+`cli` mode invokes `claude -p` with `--settings '{"disableAllHooks": true}'`. That part is not optional: without it the child session fires its own `Stop` hook and recurses forever.
 
-## เสียงพูด
+## Voices
 
-เลือกอัตโนมัติตามลำดับ: Google → Azure → macOS `say` → edge-tts → Windows SAPI → espeak
-ทุก engine มีเสียงคู่ไทย/อังกฤษ สลับให้เองตามภาษาของข้อความที่จะพูด
+Chosen automatically in this order: Google → Azure → macOS `say` → edge-tts → Windows SAPI → espeak. Every engine has a Thai and an English voice and switches between them per utterance.
 
-| engine | คุณภาพ | เสียงไทย | เสียงอังกฤษ | วิธีเปิดใช้ |
+| Engine | Quality | Thai voice | English voice | How to enable |
 |---|---|---|---|---|
-| `google` | ดีที่สุด | `th-TH-Neural2-C` | `en-US-Neural2-C` | `export GOOGLE_TTS_API_KEY=...` |
-| `azure` | ดีมาก | `th-TH-PremwadeeNeural` | `en-US-JennyNeural` | `export AZURE_SPEECH_KEY=...` |
-| `edge` | ดี ฟรี | `th-TH-PremwadeeNeural` | `en-US-AriaNeural` | `pip install edge-tts` |
-| `say` | พอใช้ | `Kanya` | `Samantha` | macOS เท่านั้น ต้องลงเสียงไทยก่อน (ดูด้านล่าง) |
-| `espeak` | หุ่นยนต์ | `th` | `en` | Linux: `apt install espeak-ng` |
+| `google` | Best | `th-TH-Neural2-C` | `en-US-Neural2-C` | `export GOOGLE_TTS_API_KEY=...` |
+| `azure` | Very good | `th-TH-PremwadeeNeural` | `en-US-JennyNeural` | `export AZURE_SPEECH_KEY=...` |
+| `edge` | Good, free | `th-TH-PremwadeeNeural` | `en-US-AriaNeural` | `pip install edge-tts` |
+| `say` | Adequate | `Kanya` | `Samantha` | macOS only, install the Thai voice first (below) |
+| `espeak` | Robotic | `th` | `en` | Linux: `apt install espeak-ng` |
 
-**Windows:** ต้องมี Python จริงบนเครื่อง (python.org หรือ `winget install Python.Python.3.13`) — alias ของ Microsoft Store ใช้ไม่ได้ ไม่มีเสียงตอบสนองจริง แนะนำ `pip install edge-tts` เพื่อเสียง `th-TH-PremwadeeNeural` แทน SAPI ภาษาอังกฤษที่ติดมากับเครื่อง
+**Windows:** the built-in SAPI voices are English-only, so `pip install edge-tts` is worth it for `th-TH-PremwadeeNeural`.
 
-**ลงเสียงไทยบน macOS:** System Settings → Accessibility → Spoken Content →
-System Voice → Manage Voices → เลือก Thai (Kanya) แล้วดาวน์โหลด
-ถ้ายังไม่ได้ลง สคริปต์จะ fallback ไปเสียง default แล้วเขียนเตือนไว้ใน log
+**Installing the Thai voice on macOS:** System Settings → Accessibility → Spoken Content → System Voice → Manage Voices → pick Thai (Kanya) and download. Without it the script falls back to the default voice and notes it in the log.
 
-ถ้าเป็น Linux ต้องมีตัวเล่นเสียงด้วย: `apt install mpg123`
+**Linux** also needs an audio player: `apt install mpg123`.
 
-## ตั้งค่า
+## Configuration
 
-สร้าง `~/.claude/thai-secretary.json` (ทุก key ไม่บังคับ ใส่เฉพาะที่อยากเปลี่ยน):
+Create `~/.claude/thai-secretary.json`. Every key is optional — include only what you want to change.
 
 ```json
 {
@@ -143,44 +145,37 @@ System Voice → Manage Voices → เลือก Thai (Kanya) แล้วด�
 }
 ```
 
-- `language` — `auto` (ตามภาษาที่ Claude ตอบ), `th` หรือ `en` เพื่อล็อกไว้ภาษาเดียว
-- `notify_lang` — ภาษาของเสียงแจ้งเตือน `auto` = ตามภาษาของคำตอบล่าสุด
-- `inject_instruction` — ปิดเป็น `false` ถ้าไม่อยากให้มีบรรทัด 🔊 ท้ายคำตอบ (จะกลับไปสรุปเองแบบเดิม)
-- `skip_under_chars` — ตอบสั้นกว่านี้เงียบไปเลย ไม่ต้องพูด
-- `min_chars` — สั้นกว่านี้อ่านดิบ ไม่ต้องเสีย token เรียกโมเดลสรุป
-- `speaking_rate` — น้อยกว่า 1.0 = ช้าลง, มากกว่า 1.0 = เร็วขึ้น
-- เสียงของแต่ละ engine ตั้งแยกสองภาษาได้ด้วยคู่ `<engine>_voice` / `<engine>_voice_en`
-  เช่น `"edge_voice_en": "en-US-GuyNeural"`
-- override ชั่วคราวด้วย env ได้ เช่น `THAI_SECRETARY_ENABLED=false claude` หรือ `THAI_SECRETARY_LANGUAGE=en claude`
+- `language` — `auto` follows Claude's answer; `th` or `en` locks it to one language
+- `notify_lang` — language for spoken notifications; `auto` follows the language of the last answer
+- `inject_instruction` — set `false` to drop the `🔊` line from answers and go back to summarising after the fact
+- `skip_under_chars` — answers shorter than this are not spoken at all
+- `min_chars` — answers shorter than this are read as-is, without spending tokens on a summary
+- `speaking_rate` — below 1.0 is slower, above is faster
+- Each engine takes a pair of voices, `<engine>_voice` and `<engine>_voice_en`, for example `"edge_voice_en": "en-US-GuyNeural"`
+- Any key can be overridden through the environment for one run: `THAI_SECRETARY_ENABLED=false claude`, `THAI_SECRETARY_LANGUAGE=en claude`
 
-## คำสั่ง
+## Commands
 
-| Command | หน้าที่ |
+| Command | What it does |
 |---|---|
-| `/lingling:mute` | ปิดเสียงเลขาส่วนตัวชั่วคราว |
-| `/lingling:unmute` | เปิดเสียงกลับมา |
+| `/lingling:mute` | Silence the voice secretary |
+| `/lingling:unmute` | Turn it back on |
 
-## เวลามีปัญหา
+## Troubleshooting
 
-- `/hooks` ใน Claude Code — ดูว่า hook ลงทะเบียนแล้วจริงไหม มาจากไฟล์ไหน
-- `~/.claude/thai-secretary.log` — บอกทุกขั้น ตั้งแต่ข้อความที่จะพูดไปจนถึง error ของ TTS
-- สคริปต์ออกแบบให้ exit 0 เสมอ ต่อให้พังข้างในก็ไม่ทำให้ session ของคุณสะดุด
-- เสียงพูดทับกันตอนสั่งงานรัวๆ — มีระบบหยุดเสียงเก่าก่อนพูดใหม่อยู่แล้ว
-  ถ้ายังทับให้เช็คว่า `async: true` อยู่ครบทั้ง `Stop` และ `Notification`
-- ไม่มีบรรทัด 🔊 ท้ายคำตอบ — `UserPromptSubmit` hook **ห้ามตั้ง** `async: true`
-  เพราะ Claude Code ทิ้ง stdout ของ async hook ทั้งหมด คำสั่งจึงไปไม่ถึง Claude
-- พูดผิดภาษา — ดูบรรทัด `stop[...] lang=...` ใน log ว่าตรวจได้อะไร
-  ถ้าตรวจเพี้ยนบ่อยให้ตั้ง `language` เป็น `th` หรือ `en` ไปเลย
-- **Windows:** ถ้าได้ยินเสียงอังกฤษแทนที่จะเป็นไทย มักเป็นเพราะ terminal ยังไม่เห็น PATH ใหม่หลังติดตั้ง Python —
-  ปิดหน้าต่างเทอร์มินัลทั้งหมดแล้วเปิดใหม่ ไม่ใช่แค่พิมพ์ `claude` ซ้ำในหน้าต่างเดิม
+- `/hooks` in Claude Code shows whether the hooks registered and which file they came from.
+- `~/.claude/thai-secretary.log` records every step, from the text about to be spoken down to TTS errors. A `stop[inline]` line means it used Claude's own summary; `stop[summary]` means it fell back to summarising.
+- The script always exits 0. Even a failure inside it cannot interrupt your session.
+- **No `🔊` line on answers** — the `UserPromptSubmit` hook must **not** be `async`. Claude Code discards the stdout of async hooks, so the instruction never reaches the model.
+- **Wrong language** — check the `stop[...] lang=...` line in the log to see what was detected. If it misfires often, pin `language` to `th` or `en`.
+- **No sound at all** — run `python scripts/secretary.py --mode test`. If it reports `engine: none`, install one from the [Voices](#voices) table.
+- **Overlapping speech** on rapid turns is already handled by stopping the previous utterance first. If it persists, confirm `async: true` is still set on both `Stop` and `Notification`.
 
-## ข้อจำกัดที่ควรรู้
+## Known limits
 
-- **Claude Code** ใช้ได้เต็มที่ ทั้ง terminal, IDE extension และ Desktop app
-- **Cowork** hook รันในแซนด์บ็อกซ์ที่แยกจากเครื่องคุณ เสียงจึงออกลำโพงคุณไม่ได้
-  ถ้าจะทำต้องเปลี่ยนเป็น HTTP hook ยิงไปหา endpoint ที่เครื่องคุณแทน
-- **Chat (web/มือถือ)** ไม่มีระบบ hook ทำได้แค่ระดับ skill/style ที่บังคับให้ปิดท้าย
-  ด้วยบล็อกสรุปภาษาไทย แล้วใช้ read-aloud ของ OS อ่าน
+- **Claude Code** — fully supported in the terminal, the IDE extension and the desktop app.
+- **Cowork** — hooks run in a sandbox separate from your machine, so audio cannot reach your speakers. It would take an HTTP hook pointed at an endpoint on your own machine.
+- **Chat (web and mobile)** — no hook system. The closest equivalent is a skill or style that ends every answer with a summary block, read by your operating system's read-aloud feature.
 
 ## License
 

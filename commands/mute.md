@@ -1,10 +1,12 @@
 ---
-description: ปิดเสียงเลขาส่วนตัวชั่วคราว
+description: Silence the voice secretary for now
 ---
-รันคำสั่งนี้เพื่อปิดเสียง แล้วรายงานผลสั้นๆ:
+Run this to turn the voice off, then report the result in one short line:
 
 ```bash
-if python3 --version >/dev/null 2>&1; then PY=python3; elif python --version >/dev/null 2>&1; then PY=python; else echo "ไม่พบ Python ที่ใช้งานได้ (ลองปิดเทอร์มินัลทั้งหมดแล้วเปิดใหม่)"; exit 1; fi
+# On Windows python3 is usually a Microsoft Store stub that fails on --version,
+# so probe in this order and take the first one that actually answers.
+if python3 --version >/dev/null 2>&1; then PY=python3; elif python --version >/dev/null 2>&1; then PY=python; elif py --version >/dev/null 2>&1; then PY=py; else echo "No usable Python found. Install Python 3.9+ from python.org, then reopen every terminal window."; exit 1; fi
 PYTHONUTF8=1 "$PY" -c "
 import json,pathlib
 p=pathlib.Path.home()/'.claude'/'thai-secretary.json'
@@ -12,5 +14,5 @@ c=json.loads(p.read_text()) if p.exists() else {}
 c['enabled']=False
 p.parent.mkdir(parents=True,exist_ok=True)
 p.write_text(json.dumps(c,ensure_ascii=False,indent=2))
-print('ปิดเสียงแล้ว')"
+print('Voice secretary muted.')"
 ```

@@ -1,7 +1,7 @@
 {
   "name": "lingling",
-  "version": "0.3.0",
-  "description": "เลขาส่วนตัวสองภาษา: สรุปงานที่ Claude เพิ่งทำ ปิดท้ายคำตอบเป็น transcript แล้วอ่านออกเสียงเป็นภาษาเดียวกับที่ Claude ตอบ (ไทย/อังกฤษ)",
+  "version": "0.3.1",
+  "description": "Bilingual voice secretary: Claude ends each answer with a spoken-summary line, read aloud in the language it answered in (Thai or English)",
   "author": {
     "name": "Panumeth"
   },
