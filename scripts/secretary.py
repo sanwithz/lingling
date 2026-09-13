@@ -8,11 +8,18 @@ Reads the hook's JSON from stdin, then:
                    (UserPromptSubmit — must stay sync, async stdout is discarded)
   --mode stop    : speak that line; if it is missing, summarise the answer instead
   --mode notify  : say a short notice when Claude wants permission or input
+  --mode ensure  : check for the neural voice, spawn the installer if it is missing
+  --mode install : install the neural voice (runs detached; also callable by hand)
   --mode test    : speak a test line in each language (needs no stdin)
 
 Built so it cannot break anything: every error is swallowed and the exit code is
 always 0, so a failure in here never interrupts a Claude Code session.
 """
+
+# macOS ships python 3.9 at /usr/bin/python3, and 3.9 cannot evaluate "str | None"
+# annotations at runtime. Without this line the whole file fails to import on any
+# machine with no hand-installed python, leaving the plugin silent for no stated reason.
+from __future__ import annotations
 
 import argparse
 import json
@@ -28,22 +35,23 @@ from pathlib import Path
 
 DEFAULTS = {
     "enabled": True,
-    # auto | th | en  (auto = เดาจากภาษาที่ Claude ตอบ)
+    # auto | th | en  (auto = follow the language Claude answered in)
     "language": "auto",
-    # ภาษาของเสียงแจ้งเตือน: auto | th | en (auto = ตามภาษาที่ Claude ตอบครั้งล่าสุด)
+    # Language for spoken alerts: auto | th | en (auto = the last answer's language)
     "notify_lang": "auto",
-    # ให้ Claude ปิดท้ายคำตอบด้วยบรรทัดสรุป (= transcript ที่คนไม่ได้ฟังอ่านตามได้)
+    # Have Claude close each answer with the summary line, which doubles as a
+    # transcript for anyone who did not hear the audio
     "inject_instruction": True,
     # auto | say | google | azure | edge | espeak | none
     "voice_engine": "auto",
-    # auto | api | cli | none   (none = อ่านข้อความดิบโดยไม่สรุป)
+    # auto | api | cli | none   (none = speak the raw text without summarising)
     "summarizer": "auto",
     "model": "claude-haiku-4-5-20251001",
-    "min_chars": 180,          # ข้อความสั้นกว่านี้ไม่ต้องสรุป อ่านเลย
-    "skip_under_chars": 40,    # สั้นมากๆ ไม่ต้องพูดเลย
-    "max_input_chars": 8000,   # กันค่าใช้จ่ายบานปลาย
+    "min_chars": 180,          # shorter than this is spoken as-is, no summary
+    "skip_under_chars": 40,    # shorter than this is not worth speaking at all
+    "max_input_chars": 8000,   # keeps a runaway answer from running up a bill
     "max_spoken_chars": 600,
-    "summarizer_timeout": 150, # claude CLI บน Windows เย็นเครื่องช้ากว่า 60 วิบ่อย
+    "summarizer_timeout": 150, # a cold claude CLI on Windows often needs over 60s
     "say_voice": "Kanya",
     "say_voice_en": "Samantha",
     "say_rate": 190,
@@ -59,25 +67,28 @@ DEFAULTS = {
     "log": "~/.claude/thai-secretary.log",
 }
 
-SYSTEM_PROMPT_TH = """คุณคือเลขาส่วนตัวที่กำลังรายงานผลงานให้เจ้านายฟังด้วยเสียง
+SYSTEM_PROMPT_TH = """You are a personal secretary reporting results out loud to your boss.
 
-สรุปสิ่งที่ AI agent เพิ่งทำเสร็จ เป็นภาษาไทยแบบพูดคุย 2-3 ประโยค
+Summarise what the AI agent just finished doing, in 2-3 conversational sentences.
+Write that summary in Thai. Every rule below applies to the Thai you produce.
 
-กฎ:
-- เขียนแบบที่ "อ่านออกเสียงแล้วฟังรู้เรื่อง" ห้ามมี markdown, bullet, emoji, หรือเครื่องหมายพิเศษ
-- ห้ามอ่านโค้ด ชื่อไฟล์ยาวๆ path หรือ URL ให้เรียกรวมๆ เช่น "แก้ไฟล์ config" "อัปเดตสามไฟล์"
-- ศัพท์เทคนิคที่คนไทยใช้ทับศัพท์อยู่แล้ว ให้ทับศัพท์ไปเลย อย่าแปลเป็นไทยแข็งๆ
-- ห้ามสะกดชื่อเฉพาะภาษาอังกฤษที่ไม่คุ้นหู (ชื่อโปรแกรม ปลั๊กอิน ไลบรารี) เป็นคำไทยเดาสุ่ม
-  ถ้าจำเป็นต้องพูดถึง ให้เรียกลอยๆ เช่น "ปลั๊กอินตัวนี้" "ระบบที่ใช้อยู่" แทนชื่อเต็ม
-- ถ้าต้องพูดถึงเครื่องหมายวรรคตอน ให้ใช้คำพูดทั่วไปแบบคนคุยกัน เช่น "เว้นจังหวะ" "คั่นจังหวะ"
-  ห้ามใช้ศัพท์ทางการเช่น จุลภาค มหัพภาค ทวิภาค
-- ตอบให้ครบ 3 อย่าง: ทำอะไรเสร็จ / ผลเป็นยังไง / ต้องทำอะไรต่อ (ถ้าไม่มีข้อไหนก็ข้าม)
-- ถ้ามีปัญหาหรือ error ให้บอกตรงๆ เป็นอย่างแรก อย่าเออออตาม
-- ห้ามขึ้นต้นว่า "สรุปคือ" หรือ "จากข้อความ" ให้พูดผลลัพธ์เลย
-- แบ่งจังหวะให้เป็นธรรมชาติ: จบแต่ละประโยคด้วยจุด (.) และคั่นแต่ละวลีย่อยด้วยจุลภาค (,)
-  อย่าเขียนเป็นประโยคยาวพรืดไม่มีจุดหยุดพัก ประมาณ 5-8 คำต่อวลีก็เว้นจังหวะทีนึง
+Rules:
+- Write it to be *heard*, not read: no markdown, no bullets, no emoji, no special characters.
+- Never read out code, long filenames, paths or URLs. Refer to them in the round, like
+  "the config file" or "three files under the scripts folder".
+- Technical terms that Thai speakers normally borrow from English stay borrowed. Do not
+  force a stiff literal Thai translation onto a word people say in English every day.
+- Never invent a Thai spelling for an unfamiliar English proper noun (a program, plugin
+  or library name). Refer to it generically instead — "this plugin", "the tool in use".
+- Talk about punctuation the way people do in conversation, never with the formal Thai
+  grammatical names for the marks themselves.
+- Cover three things: what got done, how it turned out, what happens next (skip any that don't apply).
+- If something failed or broke, lead with that plainly. Never paper over a problem.
+- Don't open with "in summary" or "based on the text" — go straight to the result.
+- Pace it naturally: end each sentence with a period and separate clauses with commas,
+  roughly every 5-8 words, so the speech engine has somewhere to breathe.
 
-ตอบเฉพาะข้อความที่จะอ่านออกเสียง ไม่ต้องมีอะไรอื่น"""
+Reply with the spoken text only, nothing else."""
 
 SYSTEM_PROMPT_EN = """You are a personal secretary reporting results out loud to your boss.
 
@@ -98,8 +109,8 @@ Reply with the spoken text only, nothing else."""
 
 SYSTEM_PROMPTS = {"th": SYSTEM_PROMPT_TH, "en": SYSTEM_PROMPT_EN}
 
-# บรรทัดสรุปที่ Claude เขียนปิดท้ายเอง — เป็นทั้ง transcript ที่คนอ่านตามได้
-# และเป็นข้อความที่เอาไปอ่านออกเสียงตรงๆ โดยไม่ต้องเรียก LLM ซ้ำอีกรอบ
+# The summary line Claude writes at the end of its own answer. It serves as both the
+# transcript a reader can follow and the text fed straight to TTS, with no second LLM call.
 SPOKEN_MARKER = "🔊"
 
 INJECTED_INSTRUCTION = """<lingling-voice-secretary>
@@ -122,6 +133,9 @@ Rules for that line only (the rest of your response is unaffected):
 - Skip it only when your whole response is a single short sentence.
 </lingling-voice-secretary>"""
 
+# Spoken alerts, one set per language. The Thai entries below are Thai because they
+# are read out loud to a Thai listener, not because the source is bilingual — every
+# comment, name and log line in this file is English.
 NOTIFY_MESSAGES = {
     "th": {
         "permission_prompt": "คล็อดขออนุญาตรันคำสั่ง รบกวนกดยืนยันด้วยครับ",
@@ -204,18 +218,20 @@ THAI_CHAR_RE = re.compile(r"[฀-๿]")
 LATIN_CHAR_RE = re.compile(r"[A-Za-z]")
 
 
-# คำตอบไทยสายเทคมีศัพท์อังกฤษปนเยอะ ถ้านับแบบ "ไทยต้องชนะละติน" จะตัดสินผิด
-# เป็นอังกฤษบ่อย กลับกันคำตอบอังกฤษล้วนแทบไม่มีอักษรไทยเลย จึงใช้เกณฑ์
-# ไม่สมมาตร: มีอักษรไทยมากพอ (ทั้งสัดส่วนและจำนวนดิบ) ก็นับเป็นไทย
+# A technical answer in Thai carries a lot of English terms, so "Thai must outnumber
+# Latin" would misread it as English again and again, while an all-English answer
+# holds almost no Thai characters at all. Hence the asymmetric test: enough Thai
+# characters, by both share and raw count, is enough to call it Thai.
 THAI_RATIO_MIN = 0.15
 THAI_ABS_MIN = 8
 
 
 def detect_lang(text: str, default: str = "th") -> str:
-    """เดาภาษาของข้อความ เพื่อเลือกทั้งภาษาที่จะสรุปและเสียงที่จะใช้พูด
+    """Guess the language of a text, which picks both the summary language and the voice.
 
-    ตัดโค้ด/URL/path ทิ้งก่อนนับเสมอ ไม่งั้นคำตอบภาษาไทยที่แปะโค้ดบล็อกยาวๆ
-    จะโดนนับเป็นอังกฤษ เพราะตัวอักษรละตินในโค้ดท่วมเนื้อความจริง
+    Code, URLs and paths are stripped before counting. Without that, a Thai answer
+    quoting a long code block reads as English, because the Latin characters inside
+    the code drown out the prose around it.
     """
     probe = FENCE_RE.sub(" ", text)
     probe = INLINE_CODE_RE.sub(" ", probe)
@@ -234,7 +250,8 @@ def detect_lang(text: str, default: str = "th") -> str:
 
 
 def resolve_lang(text: str, cfg: dict, default: str = "th") -> str:
-    """ค่า language ใน config ทับการเดาได้ เผื่อคนอยากล็อกภาษาเสียงไว้ภาษาเดียว"""
+    """The config's `language` overrides the guess, for anyone who wants one
+    language and nothing else."""
     forced = str(cfg.get("language", "auto")).strip().lower()
     if forced in ("th", "en"):
         return forced
@@ -246,8 +263,8 @@ def lang_state_path() -> Path:
 
 
 def remember_lang(lang: str) -> None:
-    """จำภาษาของคำตอบล่าสุดไว้ ให้เสียงแจ้งเตือน ซึ่งไม่มีข้อความให้เดาภาษา
-    พูดภาษาเดียวกับที่คุยกันอยู่ ไม่ใช่สลับภาษากลางคัน"""
+    """Remember the last answer's language, so spoken alerts — which carry no text to
+    guess from — speak the language of the conversation instead of switching mid-stream."""
     try:
         path = lang_state_path()
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -264,8 +281,8 @@ def recall_lang(default: str = "th") -> str:
         return default
 
 
-# คำแทนของ noise แต่ละชนิด แยกตามภาษาที่จะพูด จะได้ไม่มีคำไทยโผล่
-# กลางประโยคอังกฤษ แล้วโดนเสียงอังกฤษสะกดมั่ว หรือกลับกัน
+# Replacements for each kind of noise, kept per language so no Thai word lands in the
+# middle of an English sentence for an English voice to mangle, or the other way round.
 PLACEHOLDERS = {
     "th": {"code": " (มีโค้ด) ", "url": " ลิงก์ ", "path": " ไฟล์ "},
     "en": {"code": " (a code block) ", "url": " a link ", "path": " a file "},
@@ -273,7 +290,7 @@ PLACEHOLDERS = {
 
 
 def strip_markup(text: str, lang: str = "th") -> str:
-    """เอา noise ที่อ่านออกเสียงแล้วทรมานหูออก"""
+    """Strip the noise that is painful to listen to when read out loud."""
     words = PLACEHOLDERS.get(lang, PLACEHOLDERS["th"])
     text = FENCE_RE.sub(words["code"], text)
     text = INLINE_CODE_RE.sub(lambda m: m.group(0).strip("`"), text)
@@ -285,11 +302,14 @@ def strip_markup(text: str, lang: str = "th") -> str:
     return text.strip()
 
 
+# The Thai particles that commonly end a spoken clause. Matching them is how a comma
+# gets inserted where a Thai sentence would otherwise run on without a pause.
 PACE_WORDS_RE = re.compile(
     r"(ครับ|ค่ะ|ค่า|จ้ะ|จ้า|นะครับ|นะคะ|แล้ว|เลย)(?!\s*[,.!?ๆฯ])\s+(?=\S)"
 )
-# เลขหัวข้อแบบ "1. " "2) " ที่จุดเริ่มหรือหลังช่องว่าง (ไม่ชนเลขทศนิยม/เวอร์ชันเพราะ
-# ต้องมีช่องว่างตามหลังจุด/วงเล็บ ส่วน "3.14" ตามด้วยตัวเลขไม่ใช่ช่องว่าง)
+# List numbers like "1. " or "2) " at the start or after a space. Decimals and version
+# numbers survive: this needs whitespace after the dot or bracket, and "3.14" has a
+# digit there instead.
 NUMBERED_LIST_RE = re.compile(r"(?:^|\s)\d{1,2}[.)]\s+")
 
 
@@ -297,12 +317,13 @@ def clean_for_speech(text: str, limit: int, lang: str = "th") -> str:
     text = strip_markup(text, lang)
     text = text.replace(SPOKEN_MARKER, " ")
     text = re.sub(r"[\[\](){}<>]", " ", text)
-    text = NUMBERED_LIST_RE.sub(", ", text)           # เลขหัวข้อ -> เว้นจังหวะ
-    text = re.sub(r"(?:^|\s)[-–—•]\s+", ", ", text)   # bullet -> เว้นจังหวะ
+    text = NUMBERED_LIST_RE.sub(", ", text)           # list number -> a pause
+    text = re.sub(r"(?:^|\s)[-–—•]\s+", ", ", text)   # bullet -> a pause
     if lang == "th":
-        # กันประโยคพูดรวดเดียวไม่มีจังหวะพัก แทรกจุลภาคหลังคำลงท้ายประโยคทั่วไป
-        # ที่ยังไม่มีเครื่องหมายวรรคตอนตามหลัง (เผื่อ summarizer ลืมเว้นจังหวะเอง)
-        # อังกฤษไม่ต้อง เพราะเว้นวรรคระหว่างคำอยู่แล้ว engine หาจังหวะเองได้
+        # Thai is written without spaces between words, so a summary that forgot its
+        # own punctuation comes out as one unbroken rush. Insert a comma after the
+        # common sentence-ending particles that have no punctuation of their own yet.
+        # English needs none of this: the spaces already tell the engine where to breathe.
         text = PACE_WORDS_RE.sub(r"\1, ", text)
     text = re.sub(r"\s*,\s*,+", ", ", text)
     text = re.sub(r"\s+", " ", text).strip(" ,")
@@ -345,15 +366,15 @@ def summarize_via_api(text: str, cfg: dict, lang: str = "th") -> str | None:
 
 
 def summarize_via_cli(text: str, cfg: dict, lang: str = "th") -> str | None:
-    """ใช้ auth เดิมของ Claude Code โดยไม่ต้องมี API key
+    """Reuse Claude Code's own auth, so no API key is needed.
 
-    สำคัญ: ต้องส่ง disableAllHooks ไม่งั้น session ลูกจะยิง Stop hook
-    ซ้อนกลับมาเป็น loop ไม่รู้จบ
+    Critical: disableAllHooks must be passed, or the child session fires its own
+    Stop hook and recurses forever.
     """
     claude = shutil.which("claude")
     if not claude:
         return None
-    header = "ข้อความที่ต้องสรุป" if lang == "th" else "Text to summarise"
+    header = "Text to summarise"
     prompt = SYSTEM_PROMPTS.get(lang, SYSTEM_PROMPT_TH) + "\n\n---\n\n" + header + ":\n\n" + text
     try:
         proc = subprocess.run(
@@ -389,7 +410,165 @@ def summarize(text: str, cfg: dict, lang: str = "th") -> str:
     return text
 
 
+# ---------------------------------------------------------------- bootstrap
+
+# A voice that sounds human means edge-tts, and nobody should have to install it by
+# hand, so this section does it for them. Three rules keep that from being rude:
+#   - Install into the plugin's own venv under ~/.claude. Never touch the system
+#     python or the user's global tools. Uninstalling is deleting one directory.
+#   - Run detached from the hook, so nothing blocks a turn and no hook timeout can
+#     kill the download halfway through.
+#   - Be free to fail. Until it succeeds, the built-in system voice carries on.
+VENV_DIR = Path.home() / ".claude" / "lingling-venv"
+STAMP_PATH = Path.home() / ".claude" / "lingling-install.json"
+RETRY_AFTER_FAILURE = 24 * 3600   # a dead network retried every session is just noise
+STALE_RUNNING_AFTER = 15 * 60     # an installer killed mid-run must not lock forever
+
+
+def venv_bin() -> Path:
+    return VENV_DIR / ("Scripts" if sys.platform == "win32" else "bin")
+
+
+def venv_python() -> Path:
+    return venv_bin() / ("python.exe" if sys.platform == "win32" else "python")
+
+
+def read_stamp() -> dict:
+    try:
+        return json.loads(STAMP_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def write_stamp(**fields) -> None:
+    try:
+        STAMP_PATH.parent.mkdir(parents=True, exist_ok=True)
+        data = read_stamp()
+        data.update(fields, updated=time.time())
+        STAMP_PATH.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    except Exception:
+        pass
+
+
+def install_wanted(cfg: dict) -> bool:
+    """Is edge-tts worth installing here?
+
+    Only when it would actually get used: the user has not pinned a different engine,
+    and what this machine can reach right now is not already a neural voice — that is,
+    it would otherwise fall back to say, powershell, espeak or nothing at all.
+    """
+    if cfg.get("voice_engine", "auto") not in ("auto", "edge"):
+        return False
+    return pick_engine(cfg) not in ("google", "azure", "edge")
+
+
+def install_edge_tts(cfg: dict) -> str | None:
+    """Build the venv and install edge-tts into it. Returns the CLI path on success."""
+    uv = find_exe("uv")
+    try:
+        if uv:
+            # uv builds the venv in seconds, so use it whenever the machine has it
+            subprocess.run([uv, "venv", str(VENV_DIR)],
+                           capture_output=True, text=True, timeout=180)
+            step = subprocess.run([uv, "pip", "install", "--python",
+                                   str(venv_python()), "edge-tts"],
+                                  capture_output=True, text=True, timeout=600)
+        else:
+            subprocess.run([sys.executable, "-m", "venv", str(VENV_DIR)],
+                           capture_output=True, text=True, timeout=300)
+            step = subprocess.run([str(venv_python()), "-m", "pip", "install",
+                                   "--upgrade", "--quiet", "edge-tts"],
+                                  capture_output=True, text=True, timeout=900)
+    except Exception as exc:
+        log(cfg, f"install: {exc}")
+        return None
+
+    exe = find_exe("edge-tts")
+    if exe:
+        return exe
+    detail = (step.stderr or step.stdout or "").strip().splitlines()
+    log(cfg, f"install failed: {detail[-1] if detail else 'edge-tts not found after install'}")
+    return None
+
+
+def mode_install(cfg: dict) -> None:
+    """Do the real install. This is the mode spawned detached, or run by hand."""
+    exe = find_exe("edge-tts")
+    if exe:
+        write_stamp(state="ok", edge_tts=exe)
+        return
+
+    stamp = read_stamp()
+    if (stamp.get("state") == "running"
+            and time.time() - stamp.get("updated", 0) < STALE_RUNNING_AFTER):
+        return  # another installer is already working
+
+    log(cfg, "install: setting up edge-tts (neural voices)")
+    write_stamp(state="running", edge_tts=None)
+    exe = install_edge_tts(cfg)
+    write_stamp(state="ok" if exe else "failed", edge_tts=exe)
+    log(cfg, f"install: {'ready at ' + exe if exe else 'failed, staying on the system voice'}")
+
+    if exe and not any(shutil.which(player) for player in
+                       ("afplay", "mpg123", "ffplay", "paplay", "aplay")) \
+            and sys.platform not in ("darwin", "win32"):
+        log(cfg, "install: no mp3 player on this machine — install mpg123 or ffmpeg "
+                 "as well (for example: sudo apt install mpg123)")
+
+
+def mode_ensure(cfg: dict) -> None:
+    """Check cheaply, then spawn the installer detached. Must return at once.
+
+    Called from SessionStart, and again at the end of UserPromptSubmit to catch the
+    case where the plugin was installed mid-session, after SessionStart had passed.
+    """
+    if not install_wanted(cfg):
+        return
+    stamp = read_stamp()
+    age = time.time() - stamp.get("updated", 0)
+    if stamp.get("state") == "running" and age < STALE_RUNNING_AFTER:
+        return
+    if stamp.get("state") == "failed" and age < RETRY_AFTER_FAILURE:
+        return
+
+    # subprocess has no single way to detach on both sides: start_new_session is POSIX
+    # only (Windows swallows it silently), and Windows wants creationflags instead.
+    detach = ({"creationflags": 0x00000008 | 0x08000000}   # DETACHED_PROCESS | NO_WINDOW
+              if sys.platform == "win32" else {"start_new_session": True})
+    runner = Path(__file__).resolve()
+    try:
+        logfile = Path(cfg.get("log", DEFAULTS["log"])).expanduser()
+        logfile.parent.mkdir(parents=True, exist_ok=True)
+        with logfile.open("a", encoding="utf-8") as fh:
+            subprocess.Popen([sys.executable, str(runner), "--mode", "install"],
+                             stdin=subprocess.DEVNULL, stdout=fh, stderr=fh,
+                             **detach)
+    except Exception as exc:
+        log(cfg, f"ensure: spawn failed: {exc}")
+
+
 # ---------------------------------------------------------------- tts
+
+def find_exe(name: str) -> str | None:
+    """Find a CLI installed by pipx, uv or pip --user, even when the hook's PATH misses it.
+
+    A hook inherits its PATH from the Claude Code process, not from the shell sitting
+    open on the desktop, so a tool in ~/.local/bin can be invisible to shutil.which
+    while running perfectly when typed by hand. Check those directories by hand too.
+    """
+    found = shutil.which(name)
+    if found:
+        return found
+    for directory in (venv_bin(), Path.home() / ".local" / "bin",
+                      Path("/opt/homebrew/bin"), Path("/usr/local/bin"),
+                      Path.home() / "bin"):
+        for candidate in (directory / name, directory / f"{name}.exe"):
+            try:
+                if candidate.is_file() and os.access(candidate, os.X_OK):
+                    return str(candidate)
+            except OSError:
+                continue
+    return None
 
 def pick_engine(cfg: dict) -> str:
     engine = cfg.get("voice_engine", "auto")
@@ -399,10 +578,13 @@ def pick_engine(cfg: dict) -> str:
         return "google"
     if os.environ.get("AZURE_SPEECH_KEY"):
         return "azure"
+    # edge comes before say because the Thai voice macOS ships (Kanya) is an older
+    # compact voice, stiff in its pacing and flat in tone, while edge is a neural voice
+    # that sounds like a person. say stays as the fallback: always present, always offline.
+    if find_exe("edge-tts"):
+        return "edge"
     if sys.platform == "darwin" and shutil.which("say"):
         return "say"
-    if shutil.which("edge-tts"):
-        return "edge"
     if sys.platform == "win32":
         return "powershell"
     if shutil.which("spd-say") or shutil.which("espeak-ng"):
@@ -411,13 +593,13 @@ def pick_engine(cfg: dict) -> str:
 
 
 def _play_audio_windows(path: str) -> bool:
-    """เล่นไฟล์เสียงบน Windows ผ่าน MCI (winmm.dll)
+    """Play an audio file on Windows through MCI (winmm.dll).
 
-    ไม่มี afplay/mpg123/ffplay/paplay/aplay บน Windows โดย default
-    ลองใช้ WMPlayer.OCX ผ่าน PowerShell ก่อนแต่ playState ค้างที่ "waiting"
-    เพราะ ActiveX control ต้องมี Windows message loop คอยขยับ state ซึ่ง
-    PowerShell console เปล่าไม่มีให้ จึงเปลี่ยนมาใช้ mciSendString ซึ่งเล่นและ
-    บล็อกจนจบเพลงได้เองโดยไม่ต้องพึ่ง message loop ภายนอก (คำสั่ง "play ... wait")
+    Windows ships none of afplay, mpg123, ffplay, paplay or aplay. WMPlayer.OCX
+    through PowerShell was tried first, but playState sticks at "waiting": an ActiveX
+    control needs a Windows message loop to advance its state, and a bare PowerShell
+    console has none. mciSendString needs no external loop — its "play ... wait"
+    command both plays and blocks until the sound is finished.
     """
     ps = shutil.which("powershell") or shutil.which("pwsh")
     if not ps:
@@ -454,7 +636,7 @@ def play_audio(path: str, cfg: dict) -> None:
             return
     if sys.platform == "win32" and _play_audio_windows(path):
         return
-    log(cfg, "no audio player found (ลอง brew/apt install mpg123)")
+    log(cfg, "no audio player found (try brew/apt install mpg123)")
 
 
 def tts_google(text: str, cfg: dict, lang: str = "th") -> bool:
@@ -522,16 +704,23 @@ def tts_azure(text: str, cfg: dict, lang: str = "th") -> bool:
 
 
 def tts_edge(text: str, cfg: dict, lang: str = "th") -> bool:
-    if not shutil.which("edge-tts"):
+    exe = find_exe("edge-tts")
+    if not exe:
         return False
     tmp = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
     tmp.close()
     try:
         rate = f'{int((cfg["speaking_rate"] - 1) * 100):+d}%'
         voice = cfg["edge_voice"] if lang == "th" else cfg.get("edge_voice_en", "en-US-AriaNeural")
-        subprocess.run(["edge-tts", "--voice", voice, f"--rate={rate}",
-                        "--text", text, "--write-media", tmp.name],
-                       capture_output=True, timeout=60)
+        proc = subprocess.run([exe, "--voice", voice, f"--rate={rate}",
+                               "--text", text, "--write-media", tmp.name],
+                              capture_output=True, timeout=60)
+        # edge is an online service: the moment the network drops it writes an empty
+        # file and exits quietly. Without this check speak() believes it spoke, and
+        # never walks its fallback chain down to the system voice.
+        if proc.returncode != 0 or os.path.getsize(tmp.name) < 1024:
+            log(cfg, "edge tts produced no audio (offline?), falling back")
+            return False
         play_audio(tmp.name, cfg)
         return True
     except Exception as exc:
@@ -554,10 +743,11 @@ def tts_say(text: str, cfg: dict, lang: str = "th") -> bool:
     try:
         proc = subprocess.run(cmd + [text], capture_output=True, text=True)
         if proc.returncode != 0 and voice:
-            # ยังไม่ได้ลงเสียงไทย -> ลองเสียง default
+            # the Thai voice is not downloaded yet, so try the default one
             subprocess.run(["say", text], capture_output=True)
             log(cfg, f"voice '{voice}' not installed — "
-                     "ลงได้ที่ System Settings > Accessibility > Spoken Content > System Voice > Thai")
+                     "download it in System Settings > Accessibility > Spoken Content "
+                     "> System Voice > Thai")
         return True
     except Exception as exc:
         log(cfg, f"say failed: {exc}")
@@ -608,23 +798,25 @@ def speak(text: str, cfg: dict, lang: str | None = None) -> None:
     if engine == "none":
         log(cfg, "no tts engine available")
         return
-    # ปกติผู้เรียกรู้ภาษาอยู่แล้ว (ตัดสินจากคำตอบต้นทาง ไม่ใช่จากบทสรุป)
-    # เดาเองเป็นทางสำรองเฉยๆ เผื่อมีใครเรียก speak ตรงๆ
+    # Callers normally know the language already, having judged it from the source
+    # answer rather than the summary. Guessing here is only a fallback for anyone
+    # who calls speak() directly.
     lang = lang or detect_lang(text)
     log(cfg, f"speak lang={lang} engine={engine}")
     stop_previous(cfg)
     fn = ENGINES.get(engine)
     if not fn or not fn(text, cfg, lang):
-        # ไล่ fallback ตามที่มีในเครื่อง
+        # walk the fallbacks and take whatever this machine can actually do
         for name, alt in ENGINES.items():
             if name != engine and alt(text, cfg, lang):
                 return
 
 
 def _is_our_process(pid: int) -> bool:
-    """ยืนยันว่า PID นั้นเป็นสคริปต์ตัวนี้จริง ก่อนจะส่งสัญญาณฆ่า
+    """Confirm a PID really belongs to this script before signalling it.
 
-    PID ถูกนำกลับมาใช้ซ้ำได้ ถ้าไม่เช็คอาจไปฆ่าโปรเซสอื่นของผู้ใช้
+    PIDs get recycled. Without this check, the kill could land on some unrelated
+    process of the user's.
     """
     try:
         cmdline = Path(f"/proc/{pid}/cmdline").read_bytes().decode("utf-8", "ignore")
@@ -640,7 +832,7 @@ def _is_our_process(pid: int) -> bool:
 
 
 def stop_previous(cfg: dict) -> None:
-    """กันเสียงพูดทับกันเวลาสั่งงานรัวๆ"""
+    """Keep utterances from piling on top of each other during rapid turns."""
     pidfile = Path.home() / ".claude" / ".thai-secretary.pid"
     try:
         if pidfile.exists():
@@ -658,18 +850,19 @@ def stop_previous(cfg: dict) -> None:
 
 # ---------------------------------------------------------------- modes
 
-# บรรทัดสรุปอยู่ท้ายคำตอบเสมอ จำกัดขอบเขตการค้นไว้แถวท้าย กัน 🔊 ที่ Claude
-# บังเอิญพิมพ์ไว้กลางคำตอบ (เช่นตอนอธิบายปลั๊กอินตัวนี้เอง) ถูกหยิบมาอ่านผิดตัว
+# The summary line always sits at the end, so the search is limited to the tail. That
+# keeps a 🔊 Claude happened to type mid-answer — while explaining this very plugin,
+# say — from being picked up and read out as the summary.
 SPOKEN_SEARCH_TAIL = 1200
 SPOKEN_MAX_CHARS = 800
 
 
 def extract_spoken_line(message: str) -> str | None:
-    """ดึงบรรทัด 🔊 ที่ Claude เขียนปิดท้ายคำตอบออกมา
+    """Pull out the 🔊 line Claude wrote at the end of its answer.
 
-    บรรทัดนี้ทำหน้าที่สองอย่างพร้อมกัน: เป็น transcript ที่คนไม่ได้ฟังอ่านตามได้
-    ในแชทตรงนั้นเลย และเป็นข้อความที่เอาไปเข้า TTS ได้ทันทีโดยไม่ต้องเรียก LLM
-    สรุปซ้ำ ทำให้ Stop hook เป็น async ที่ไม่หน่วงอะไรเลย
+    That line does two jobs at once: it is the transcript a reader can follow right
+    there in the chat, and it is text ready to go straight into TTS without a second
+    LLM call. That is what keeps the Stop hook async and free of any delay.
     """
     tail_start = max(0, len(message) - SPOKEN_SEARCH_TAIL)
     idx = message.rfind(SPOKEN_MARKER, tail_start)
@@ -677,25 +870,28 @@ def extract_spoken_line(message: str) -> str | None:
         return None
     spoken = message[idx + len(SPOKEN_MARKER):].strip()
     spoken = spoken.strip("*_:>- \t")
-    # อยู่ในโค้ดบล็อก = Claude กำลังยกตัวอย่างรูปแบบ ไม่ได้กำลังสรุปงานจริง
+    # Inside a code block means Claude is demonstrating the format, not summarising
     if not spoken or "```" in spoken or len(spoken) > SPOKEN_MAX_CHARS:
         return None
     return spoken
 
 
 def mode_inject(cfg: dict) -> None:
-    """UserPromptSubmit: บอก Claude ให้ปิดท้ายคำตอบด้วยบรรทัดสรุปสำหรับอ่านออกเสียง
+    """UserPromptSubmit: ask Claude to end its answer with a line written to be spoken.
 
-    ข้อบังคับสองข้อที่ทดสอบกับ Claude Code จริงแล้ว ห้ามเปลี่ยนโดยไม่ทดสอบซ้ำ:
+    Two constraints, both established against real Claude Code. Do not change either
+    without testing it again:
 
-    1. hook นี้ต้องเป็น sync (ห้ามใส่ async: true ใน hooks.json)
-       เพราะ Claude Code ทิ้ง stdout ของ async hook ทั้งหมด คำสั่งจะไปไม่ถึงโมเดล
-    2. ต้องพิมพ์เป็น "ข้อความเปล่า" ไม่ใช่ JSON ที่มี additionalContext
-       UserPromptSubmit เป็นอีเวนต์กลุ่มพิเศษที่เอา stdout ดิบไปต่อเข้า context ให้เลย
-       ส่วน additionalContext ถูกกลืนหายทั้งกรณี suppressOutput true และ false
-       (ยิงทดสอบด้วย claude -p แล้ว: แบบ JSON โมเดลตอบ NONE, แบบข้อความเปล่าโมเดลเห็นค่า)
+    1. This hook must stay sync — never async: true in hooks.json. Claude Code
+       discards the stdout of an async hook, so the instruction never reaches the model.
+    2. It must print plain text, not JSON carrying additionalContext. UserPromptSubmit
+       is one of the special events whose raw stdout is appended to the context as-is,
+       while additionalContext is swallowed whether suppressOutput is true or false.
+       (Verified with claude -p: the JSON form made the model answer NONE, the plain
+       text form made it read the value.)
 
-    งานในโหมดนี้คือพิมพ์ข้อความคงที่ก้อนเดียวแล้วจบ ไม่มี I/O ช้าอะไรให้หน่วง turn
+    All this mode does is print one fixed block and stop. There is no slow I/O in it
+    to hold up the turn.
     """
     if not cfg.get("inject_instruction", True):
         return
@@ -704,14 +900,18 @@ def mode_inject(cfg: dict) -> None:
     except Exception:
         pass
     print(INJECTED_INSTRUCTION.format(marker=SPOKEN_MARKER), flush=True)
+    # The plugin may have been installed mid-session, after SessionStart already
+    # passed. This is the safety net. It normally reads one stamp file and returns,
+    # so it holds up nothing.
+    mode_ensure(cfg)
 
 
 def read_stdin_json() -> dict:
-    """อ่าน stdin เป็น UTF-8 เสมอ
+    """Always read stdin as UTF-8.
 
-    sys.stdin.read() แบบ text-mode ปกติจะถอดรหัสด้วย locale encoding ของ
-    Windows (เช่น cp1252/cp874) ไม่ใช่ UTF-8 ทำให้ข้อความไทยที่ Claude Code
-    ส่งเข้ามาทาง pipe เพี้ยนตั้งแต่จุดรับ ต้องอ่านจาก buffer แล้ว decode เอง
+    A plain text-mode sys.stdin.read() decodes with the Windows locale encoding —
+    cp1252, cp874 — rather than UTF-8, which corrupts the Thai that Claude Code pipes
+    in, right at the point of entry. Read the buffer and decode it by hand instead.
     """
     try:
         raw = sys.stdin.buffer.read().decode("utf-8", errors="replace")
@@ -729,12 +929,14 @@ def mode_stop(cfg: dict) -> None:
 
     spoken = extract_spoken_line(message)
     if spoken:
-        # ทางหลัก: Claude เขียนบทสรุปมาให้แล้ว (และผู้ใช้เห็นมันในแชทไปแล้ว)
-        # ภาษาของบรรทัดนี้ = ภาษาที่ Claude เลือกตอบ ตรงตามที่ต้องการพอดี
+        # The main path: Claude wrote the summary itself, and the user has already
+        # read it in the chat. This line's language is the language Claude chose to
+        # answer in, which is exactly what the voice should follow.
         source = "inline"
         lang = resolve_lang(spoken, cfg)
     else:
-        # ทางสำรอง: session ที่ยังไม่ได้ฉีด instruction หรือคำตอบสั้นจน Claude ข้าม
+        # The fallback: a session that never got the instruction, or an answer
+        # short enough that Claude skipped the line
         source = "summary"
         lang = resolve_lang(message, cfg)
         cleaned = strip_markup(message, lang)
@@ -754,7 +956,7 @@ def mode_stop(cfg: dict) -> None:
 
 
 def notify_lang(cfg: dict) -> str:
-    """เสียงแจ้งเตือนไม่มีข้อความให้เดาภาษา จึงเดินตามภาษาของคำตอบล่าสุดแทน"""
+    """An alert carries no text to guess from, so it follows the last answer's language."""
     choice = str(cfg.get("notify_lang", "auto")).strip().lower()
     if choice in ("th", "en"):
         return choice
@@ -779,6 +981,7 @@ def mode_notify(cfg: dict) -> None:
     speak(message, cfg, lang)
 
 
+# Spoken by --mode test, so each line has to be in the language of the voice it checks.
 TEST_LINES = {
     "th": "สวัสดีครับ ระบบเลขาส่วนตัวพร้อมทำงานแล้ว, ทดสอบเสียงภาษาไทยสำเร็จ",
     "en": "Hi, your voice secretary is up and running, the English voice works too.",
@@ -795,8 +998,15 @@ def mode_test(cfg: dict) -> None:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     except Exception:
         pass
+    # This mode is run by hand, so the user can wait: install right here rather
+    # than spawning it into the background
+    if install_wanted(cfg):
+        print("installing    : edge-tts (neural voices), this takes a moment ...")
+        mode_install(cfg)
     engine = pick_engine(cfg)
     print(f"engine        : {engine}")
+    if engine == "edge":
+        print(f"edge-tts      : {find_exe('edge-tts')}")
     key = VOICE_KEYS.get(engine)
     if key:
         print(f"voice th      : {cfg.get(key)}")
@@ -819,7 +1029,8 @@ def mode_test(cfg: dict) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", choices=["inject", "stop", "notify", "test"],
+    parser.add_argument("--mode", choices=["inject", "stop", "notify", "test",
+                                           "ensure", "install"],
                         default="stop")
     args = parser.parse_args()
 
@@ -828,8 +1039,9 @@ def main() -> int:
         return 0
     try:
         {"inject": mode_inject, "stop": mode_stop,
-         "notify": mode_notify, "test": mode_test}[args.mode](cfg)
-    except Exception as exc:  # hook ห้ามพัง session เด็ดขาด
+         "notify": mode_notify, "test": mode_test,
+         "ensure": mode_ensure, "install": mode_install}[args.mode](cfg)
+    except Exception as exc:  # a hook must never take a session down
         log(cfg, f"unhandled error in {args.mode}: {exc}")
     return 0
 
