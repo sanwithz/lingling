@@ -51,7 +51,7 @@ It also speaks up when Claude is stuck waiting on a permission prompt or on your
 |---|---|
 | **Python 3.9+** | Must be a real install from [python.org](https://www.python.org/downloads/) (or `winget install Python.Python.3.13`). The Microsoft Store alias is a stub that does nothing — lingling detects and skips it. |
 | **Git for Windows** | Windows only. Claude Code runs shell hooks through Git Bash, which ships with [Git for Windows](https://git-scm.com/download/win). |
-| **A TTS engine** | `pip install edge-tts` is the easiest good one, and it's free. See [Voices](#voices). |
+| **A TTS engine** | Every platform ships with something, but none of them speak Thai well out of the box. See [What you actually get](#what-you-actually-get) before assuming it just works. |
 
 After installing Python on Windows, **close every terminal window and open a new one**. Retyping `claude` in the same window won't pick up the new `PATH`.
 
@@ -103,6 +103,23 @@ Either way the prompt goes out in the same language as the answer, so an English
 
 `cli` mode invokes `claude -p` with `--settings '{"disableAllHooks": true}'`. That part is not optional: without it the child session fires its own `Stop` hook and recurses forever.
 
+## What you actually get
+
+The plumbing runs on all three platforms, but the *voice* you end up with is not equal across them. This is the honest state of a fresh install with nothing extra:
+
+| | Engine chosen | Thai | English | To fix it |
+|---|---|---|---|---|
+| **Windows** | SAPI, built in | Bad. There is no Thai SAPI voice, so an English one attempts the syllables | Fine | `pip install edge-tts` |
+| **macOS** | `say`, built in | Bad until you download the Thai voice by hand | Good (Samantha) | Download Kanya, or `pip install edge-tts` and set `"voice_engine": "edge"` |
+| **Linux** | Nothing | Silent | Silent | `pip install edge-tts` **and** `apt install mpg123` |
+
+Two things worth knowing:
+
+- **edge-tts is not a Windows thing.** It is a pure-Python client for the online voice service behind Edge's Read Aloud, published as OS-independent, and it needs neither the browser nor Windows — only `pip` and an internet connection. It is the single best free upgrade on every platform.
+- **macOS never picks it on its own.** Engine selection checks for `say` before edge-tts, so on a Mac you have to set `"voice_engine": "edge"` yourself for it to be used.
+
+Only the Windows path has been tested end to end. macOS and Linux follow from the same code path but have not been run on real hardware.
+
 ## Voices
 
 Chosen automatically in this order: Google → Azure → macOS `say` → edge-tts → Windows SAPI → espeak. Every engine has a Thai and an English voice and switches between them per utterance.
@@ -119,7 +136,7 @@ Chosen automatically in this order: Google → Azure → macOS `say` → edge-tt
 
 **Installing the Thai voice on macOS:** System Settings → Accessibility → Spoken Content → System Voice → Manage Voices → pick Thai (Kanya) and download. Without it the script falls back to the default voice and notes it in the log.
 
-**Linux** also needs an audio player: `apt install mpg123`.
+**Linux** needs two separate things: an engine *and* an mp3 player. The script looks for `afplay`, `mpg123`, `ffplay`, `paplay` and `aplay` in that order, and logs `no audio player found` if none exist. `apt install mpg123` covers it.
 
 ## Configuration
 
