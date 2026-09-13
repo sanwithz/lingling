@@ -1,6 +1,18 @@
 {
-  "description": "อ่านสรุปภาษาไทยออกเสียงเมื่อ Claude ทำงานเสร็จ และแจ้งเตือนเมื่อรออินพุต",
+  "description": "ให้ Claude ปิดท้ายคำตอบด้วยบรรทัดสรุป แล้วอ่านออกเสียงเป็นภาษาเดียวกับที่ตอบ (ไทย/อังกฤษ)",
   "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "C:/Users/tai24/AppData/Local/Programs/Python/Python313/python.exe",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/secretary.py", "--mode", "inject"],
+            "timeout": 15
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [
@@ -9,7 +21,7 @@
             "command": "C:/Users/tai24/AppData/Local/Programs/Python/Python313/python.exe",
             "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/secretary.py", "--mode", "stop"],
             "async": true,
-            "statusMessage": "กำลังสรุปเป็นภาษาไทย..."
+            "statusMessage": "กำลังอ่านสรุปให้ฟัง..."
           }
         ]
       }
