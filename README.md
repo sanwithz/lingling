@@ -37,7 +37,8 @@ You need **Python 3.9 or newer** first. Get it from [python.org](https://www.pyt
 
 **After installing Python, close every terminal window and open a fresh one.** Otherwise it won't be found.
 
-Then, inside Claude Code, send these as two separate messages:
+Then, inside Claude Code, send these as two separate messages. The first one tells
+Claude Code where to find lingling; the second one installs it.
 
 ```
 /plugin marketplace add vectorkub/lingling
@@ -47,7 +48,7 @@ Then, inside Claude Code, send these as two separate messages:
 /plugin install lingling@lingling
 ```
 
-That's it.
+That's it. Restart Claude Code and it will start talking.
 
 ## How to use it
 
